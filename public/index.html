@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+  <meta name="theme-color" content="#071a2b">
+  <meta
+    name="description"
+    content="Морской бой с компьютером и сетевым соперником"
+  >
+
+  <title>Морской бой</title>
+
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./config.js"></script>
+</head>
+
+<body>
+  <div id="loadingScreen" class="loading-screen">
+    <div class="loading-emblem" aria-hidden="true">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+
+    <div class="loading-title">МОРСКОЙ БОЙ</div>
+    <div class="loading-text">Готовим поле боя…</div>
+  </div>
+
+  <div id="app" hidden>
+    <section id="menuScreen" class="screen menu-screen">
+      <div class="menu-card">
+        <header class="menu-header">
+          <div class="eyebrow">ТАКТИЧЕСКАЯ АРКАДА</div>
+
+          <h1>
+            МОРСКОЙ
+            <span>БОЙ</span>
+          </h1>
+
+          <p class="menu-lead">
+            Построй флот, найди соперника и уничтожь все его корабли
+            раньше него.
+          </p>
+        </header>
+
+        <div class="menu-actions">
+          <button
+            id="botModeButton"
+            class="primary-button large-button"
+            type="button"
+          >
+            <span class="button-icon" aria-hidden="true">⚓</span>
+            <span>
+              <strong>Играть с компьютером</strong>
+              <small>Одиночная игра с умным ботом</small>
+            </span>
+          </button>
+
+          <button
+            id="onlineModeButton"
+            class="secondary-button large-button"
+            type="button"
+          >
+            <span class="button-icon" aria-hidden="true">⚡</span>
+            <span>
+              <strong>Играть по сети</strong>
+              <small>Быстрый матч или комната по коду</small>
+            </span>
+          </button>
+        </div>
+
+        <section
+          id="onlineLobby"
+          class="online-lobby"
+          hidden
+        >
+          <div class="online-status-row">
+            <span
+              id="onlineDot"
+              class="connection-dot"
+              aria-hidden="true"
+            ></span>
+            <span id="onlineStatus">Подключение…</span>
+          </div>
+
+          <button
+            id="quickMatchButton"
+            class="primary-button"
+            type="button"
+          >
+            Быстрый матч
+          </button>
+
+          <button
+            id="createRoomButton"
+            class="secondary-button"
+            type="button"
+          >
+            Создать комнату
+          </button>
+
+          <div class="join-room-row">
+            <input
+              id="joinCodeInput"
+              type="text"
+              inputmode="text"
+              autocomplete="off"
+              autocapitalize="characters"
+              spellcheck="false"
+              maxlength="5"
+              placeholder="КОД"
+              aria-label="Код комнаты"
+            >
+
+            <button
+              id="joinRoomButton"
+              class="secondary-button"
+              type="submit"
+              form="joinRoomForm"
+            >
+              Войти
+            </button>
+          </div>
+
+          <form
+            id="joinRoomForm"
+            novalidate
+          ></form>
+
+          <div
+            id="roomBox"
+            class="room-box"
+            hidden
+          >
+            <div class="room-label">
+              Код комнаты
+            </div>
+
+            <div class="room-code-row">
+              <strong id="roomCode"></strong>
+
+              <button
+                id="copyRoomCodeButton"
+                class="small-button"
+                type="button"
+              >
+                Копировать
+              </button>
+            </div>
+
+            <p>
+              Передайте код сопернику и ждите его подключения.
+            </p>
+
+            <button
+              id="cancelRoomButton"
+              class="text-button"
+              type="button"
+            >
+              Отменить комнату
+            </button>
+          </div>
+
+          <button
+            id="backFromOnlineButton"
+            class="text-button centered-button"
+            type="button"
+          >
+            Назад к режимам
+          </button>
+        </section>
+
+        <details class="rules-details">
+          <summary>Правила и управление</summary>
+
+          <div class="rules-content">
+            <p>
+              На поле нужно разместить один четырёхпалубный,
+              два трёхпалубных, три двухпалубых и четыре однопалубных
+              корабля.
+            </p>
+
+            <p>
+              Корабли не должны соприкасаться сторонами или углами.
+              Первый игрок определяется случайно после расстановки.
+            </p>
+
+            <p>
+              Выбирайте поле мышью, касанием или клавиатурой.
+              Стрелки перемещают курсор, Enter или Пробел
+              подтверждает действие.
+            </p>
+          </div>
+        </details>
+
+        <footer class="menu-footer">
+          Без регистрации · Анонимные комнаты · Серверный контроль боя
+        </footer>
+      </div>
+    </section>
+
+    <section
+      id="gameScreen"
+      class="screen game-screen"
+      hidden
+    >
+      <header class="game-header">
+        <button
+          id="exitButton"
+          class="icon-button"
+          type="button"
+          aria-label="Выйти в меню"
+        >
+          <span aria-hidden="true">←</span>
+          <span class="desktop-button-text">Меню</span>
+        </button>
+
+        <div class="game-brand">
+          <span class="game-brand-main">МОРСКОЙ БОЙ</span>
+          <span id="modeBadge" class="mode-badge">
+            КОМПЬЮТЕР
+          </span>
+        </div>
+
+        <div class="game-actions">
+          <span
+            id="roomBadge"
+            class="room-badge"
+            hidden
+          ></span>
+
+          <button
+            id="soundButton"
+            class="icon-button"
+            type="button"
+            aria-label="Переключить звук"
+          >
+            <span aria-hidden="true">♪</span>
+            <span
+              id="soundButtonText"
+              class="desktop-button-text"
+            >
+              Звук
+            </span>
+          </button>
+
+          <button
+            id="fullscreenButton"
+            class="icon-button"
+            type="button"
+            aria-label="Полный экран"
+          >
+            <span aria-hidden="true">⛶</span>
+            <span class="desktop-button-text">Экран</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="game-scroll">
+        <div
+          id="statusBanner"
+          class="status-banner"
+          role="status"
+          aria-live="polite"
+        >
+          <div>
+            <strong id="statusText"></strong>
+            <span id="disconnectText"></span>
+          </div>
+        </div>
+
+        <div
+          id="mobileBoardTabs"
+          class="mobile-board-tabs"
+          role="tablist"
+          aria-label="Игровые поля"
+        >
+          <button
+            type="button"
+            role="tab"
+            data-board="player"
+            aria-selected="true"
+          >
+            Мой флот
+          </button>
+
+          <button
+            type="button"
+            role="tab"
+            data-board="enemy"
+            aria-selected="false"
+          >
+            Соперник
+          </button>
+        </div>
+
+        <div class="boards-grid">
+          <article
+            id="playerPane"
+            class="board-pane mobile-active"
+          >
+            <header class="board-heading">
+              <div>
+                <h2 id="playerTitle">Ваш флот</h2>
+                <p id="playerSubtitle">
+                  Расставьте все корабли
+                </p>
+              </div>
+
+              <span class="fleet-badge">
+                10 кораблей
+              </span>
+            </header>
+
+            <div class="canvas-shell">
+              <canvas
+                id="playerCanvas"
+                width="900"
+                height="900"
+                tabindex="0"
+                aria-label="Ваше игровое поле"
+              >
+                Для игры требуется браузер с поддержкой Canvas.
+              </canvas>
+            </div>
+
+            <div class="board-legend">
+              <span><i class="legend-ship"></i> Корабль</span>
+              <span><i class="legend-hit"></i> Попадание</span>
+              <span><i class="legend-miss"></i> Мимо</span>
+            </div>
+          </article>
+
+          <article
+            id="enemyPane"
+            class="board-pane"
+          >
+            <header class="board-heading">
+              <div>
+                <h2 id="enemyTitle">Компьютер</h2>
+                <p id="enemySubtitle">
+                  Нажмите на клетку для выстрела
+                </p>
+              </div>
+
+              <span class="fleet-badge">
+                10 кораблей
+              </span>
+            </header>
+
+            <div class="canvas-shell enemy-canvas-shell">
+              <canvas
+                id="enemyCanvas"
+                width="900"
+                height="900"
+                tabindex="0"
+                aria-label="Поле соперника"
+              >
+                Для игры требуется браузер с поддержкой Canvas.
+              </canvas>
+            </div>
+
+            <div class="board-legend">
+              <span><i class="legend-hit"></i> Попадание</span>
+              <span><i class="legend-miss"></i> Мимо</span>
+            </div>
+          </article>
+        </div>
+
+        <section
+          id="placementPanel"
+          class="placement-panel"
+        >
+          <div class="placement-topline">
+            <div>
+              <strong>Расстановка флота</strong>
+              <span id="placementBadge"></span>
+            </div>
+
+            <span class="placement-hint">
+              Выберите корабль и коснитесь поля
+            </span>
+          </div>
+
+          <div
+            id="fleetTray"
+            class="fleet-tray"
+            aria-label="Корабли флота"
+          ></div>
+
+          <div class="placement-actions">
+            <button
+              id="rotateButton"
+              class="secondary-button compact-button"
+              type="button"
+            >
+              ↻ Повернуть
+            </button>
+
+            <button
+              id="randomFleetButton"
+              class="secondary-button compact-button"
+              type="button"
+            >
+              Случайно
+            </button>
+
+            <button
+              id="clearFleetButton"
+              class="text-button"
+              type="button"
+            >
+              Очистить
+            </button>
+
+            <button
+              id="readyButton"
+              class="primary-button compact-button"
+              type="button"
+            >
+              Я готов
+            </button>
+          </div>
+
+          <p
+            id="placementHint"
+            class="placement-status"
+            aria-live="polite"
+          ></p>
+        </section>
+
+        <div class="bottom-grid">
+          <section class="info-card">
+            <h3>Подсказка</h3>
+            <p id="tipText"></p>
+          </section>
+
+          <section class="info-card">
+            <h3>Журнал боя</h3>
+
+            <ul
+              id="eventLog"
+              class="event-log"
+              aria-live="polite"
+            ></ul>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <div
+      id="resultOverlay"
+      class="result-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="resultTitle"
+      aria-describedby="resultText"
+      hidden
+    >
+      <div class="result-card">
+        <div class="result-icon" aria-hidden="true">⚓</div>
+
+        <h2 id="resultTitle">Бой окончен</h2>
+        <p id="resultText"></p>
+
+        <button
+          id="resultPrimaryButton"
+          class="primary-button"
+          type="button"
+        >
+          Новый бой
+        </button>
+
+        <button
+          id="resultSecondaryButton"
+          class="text-button centered-button"
+          type="button"
+        >
+          В меню
+        </button>
+      </div>
+    </div>
+
+    <div
+      id="toast"
+      class="toast"
+      role="status"
+      aria-live="polite"
+    ></div>
+  </div>
+
+  <noscript>
+    Для игры необходимо включить JavaScript.
+  </noscript>
+
+  <script type="module" src="./game.js"></script>
+</body>
+</html>
