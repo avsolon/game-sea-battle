@@ -10,6 +10,7 @@ import { WebSocketServer, WebSocket } from "ws";
 
 import {
   applyAttack,
+  formatCoordinate,
   isFleetDestroyed,
   validateFleet
 } from "./public/shared/rules.mjs";
@@ -341,10 +342,6 @@ function playerNumber(room, token) {
 
 function playerLabel(room, token) {
   return `Игрок ${playerNumber(room, token)}`;
-}
-
-function formatCoordinate(x, y) {
-  return `${x + 1}:${y + 1}`;
 }
 
 function addEvent(room, text) {
@@ -882,17 +879,17 @@ function handleFire(webSocket, message) {
   if (result.result === "miss") {
     addEvent(
       room,
-      `${attackerName}: выстрел в ${coordinate} — мимо.`
+      `${attackerName}: ${coordinate} — Мимо. Ход переходит сопернику.`
     );
   } else if (result.sunk) {
     addEvent(
       room,
-      `${attackerName}: попадание в ${coordinate}, корабль уничтожен!`
+      `${attackerName}: Попал - Убил (${coordinate}).`
     );
   } else {
     addEvent(
       room,
-      `${attackerName}: попадание в ${coordinate}.`
+      `${attackerName}: Попал - ранил (${coordinate}).`
     );
   }
 
@@ -902,7 +899,11 @@ function handleFire(webSocket, message) {
       player.token,
       "Все корабли соперника уничтожены."
     );
-  } else {
+  } else if (
+    result.result === "miss"
+  ) {
+    // При попадании стрелок ходит снова, ход переходит
+    // сопернику только после промаха.
     room.currentToken = defender.token;
   }
 

@@ -1,10 +1,12 @@
 import {
   BOARD_SIZE,
+  COLUMN_LABELS,
   FLEET_LAYOUT,
   applyAttack,
   canPlaceShip,
   chooseBotTarget,
   createRandomFleet,
+  formatCoordinate,
   getShipAt,
   isFleetDestroyed,
   validateFleet
@@ -1268,7 +1270,7 @@ function candidateFits(cells) {
 function addLog(text) {
   state.logs.push(text);
 
-  if (state.logs.length > 8) {
+  if (state.logs.length > 16) {
     state.logs.shift();
   }
 }
@@ -1517,13 +1519,6 @@ function onReadyButton() {
   }
 }
 
-function getAttackCoordinate(
-  x,
-  y
-) {
-  return `${x + 1}:${y + 1}`;
-}
-
 function finishLocalGame(winner) {
   if (
     state.phase === "finished"
@@ -1594,7 +1589,7 @@ function fireLocalAt(x, y) {
   }
 
   const coordinate =
-    getAttackCoordinate(
+    formatCoordinate(
       result.x,
       result.y
     );
@@ -1602,18 +1597,18 @@ function fireLocalAt(x, y) {
   if (result.result === "hit") {
     if (result.sunk) {
       addLog(
-        `${coordinate}: попадание, корабль уничтожен!`
+        `Попал - Убил (${coordinate}).`
       );
     } else {
       addLog(
-        `${coordinate}: попадание.`
+        `Попал - ранил (${coordinate}).`
       );
     }
 
     playSound("hit");
   } else {
     addLog(
-      `${coordinate}: мимо.`
+      `${coordinate}: Мимо. Ход переходит сопернику.`
     );
 
     playSound("miss");
@@ -1630,12 +1625,20 @@ function fireLocalAt(x, y) {
     return;
   }
 
-  state.turn = "opponent";
   state.actionLocked = false;
+
+  // При попадании стрелок ходит снова — ход переходит
+  // сопернику только после промаха.
+  state.turn =
+    result.result === "hit"
+      ? "player"
+      : "opponent";
 
   updateAll();
 
-  scheduleBotTurn(680);
+  if (result.result === "miss") {
+    scheduleBotTurn(680);
+  }
 }
 
 function fireOnlineAt(x, y) {
@@ -1755,7 +1758,7 @@ function runBotTurn(currentEpoch) {
   }
 
   const coordinate =
-    getAttackCoordinate(
+    formatCoordinate(
       result.x,
       result.y
     );
@@ -1763,18 +1766,18 @@ function runBotTurn(currentEpoch) {
   if (result.result === "hit") {
     if (result.sunk) {
       addLog(
-        `Компьютер: ${coordinate}, попадание. Корабль уничтожен!`
+        `Компьютер: Попал - Убил (${coordinate}).`
       );
     } else {
       addLog(
-        `Компьютер: ${coordinate}, попадание.`
+        `Компьютер: Попал - ранил (${coordinate}).`
       );
     }
 
     playSound("hit");
   } else {
     addLog(
-      `Компьютер: ${coordinate}, мимо.`
+      `Компьютер: ${coordinate}: Мимо. Ваш ход.`
     );
 
     playSound("miss");
@@ -1790,9 +1793,19 @@ function runBotTurn(currentEpoch) {
     return;
   }
 
-  state.turn = "player";
+  // При попадании компьютер ходит снова, ход возвращается игроку
+  // только после промаха.
+  if (result.result === "hit") {
+    state.turn = "opponent";
+  } else {
+    state.turn = "player";
+  }
 
   updateAll();
+
+  if (result.result === "hit") {
+    scheduleBotTurn(680);
+  }
 }
 
 function copyFleetFromMessage(message) {
@@ -2286,12 +2299,6 @@ function drawShip(
     centerBoardX,
     centerBoardY
   );
-
-  if (!horizontal) {
-    context.rotate(
-      Math.PI / 2
-    );
-  }
 
   context.shadowColor =
     "rgba(0, 0, 0, 0.4)";
@@ -2847,7 +2854,8 @@ function drawBoard(
 
   for (let index = 0; index < BOARD_SIZE; index += 1) {
     context.fillText(
-      String(index + 1),
+      COLUMN_LABELS[index] ||
+        String(index + 1),
       boardX +
         index * CELL_SIZE +
         CELL_SIZE / 2,
@@ -2863,10 +2871,15 @@ function drawBoard(
     );
   }
 
+  // Флот соперника не рисуется: в сетевом режиме его у клиента нет,
+  // а в режиме бота показывать его нельзя — игрок не должен
+  // видеть расположение кораблей до потопления.
   const fleet =
     role === "player"
       ? state.playerFleet
-      : state.enemyFleet;
+      : state.mode === "online"
+        ? state.enemyFleet
+        : null;
 
   const attacks =
     role === "player"
@@ -2896,10 +2909,134 @@ function drawBoard(
     );
   }
 
+  if (role === "enemy") {
+    for (const blocked of collectBlockedCells(
+      attacks
+    )) {
+      if (attackedCells.has(blocked)) {
+        continue;
+      }
+
+      drawBlockedCell(context, blocked);
+    }
+  }
+
   drawPlacementPreview(
     context,
     role
   );
+}
+
+/**
+ * Клетки, в которых корабль стоять не может: соседи по
+ * стороне и углу с клетками потопленного корабля.
+ * Корабли не соприкасаются, поэтому стрелять туда бессмысленно.
+ * Считается по выстрелам с флагом sunk: флота соперника
+ * у клиента в сетевом режиме нет. Флаг sunk стоит только на
+ * последней палубе, поэтому клетки корабля берём из sunkCells.
+ */
+function collectBlockedCells(attacks) {
+  const blocked = new Set();
+
+  for (const attack of attacks) {
+    if (!attack.sunk) {
+      continue;
+    }
+
+    const sunkCells =
+      Array.isArray(attack.sunkCells) &&
+      attack.sunkCells.length > 0
+        ? attack.sunkCells
+        : [attack];
+
+    for (const cell of sunkCells) {
+      for (let deltaY = -1; deltaY <= 1; deltaY += 1) {
+        for (
+          let deltaX = -1;
+          deltaX <= 1;
+          deltaX += 1
+        ) {
+          if (deltaX === 0 && deltaY === 0) {
+            continue;
+          }
+
+          const x = cell.x + deltaX;
+          const y = cell.y + deltaY;
+
+          if (
+            x < 0 ||
+            y < 0 ||
+            x >= BOARD_SIZE ||
+            y >= BOARD_SIZE
+          ) {
+            continue;
+          }
+
+          blocked.add(`${x}:${y}`);
+        }
+      }
+    }
+  }
+
+  return blocked;
+}
+
+function drawBlockedCell(context, key) {
+  const [x, y] = key
+    .split(":")
+    .map(Number);
+
+  const centerX =
+    BOARD_PADDING +
+    x * CELL_SIZE +
+    CELL_SIZE / 2;
+
+  const centerY =
+    BOARD_PADDING +
+    y * CELL_SIZE +
+    CELL_SIZE / 2;
+
+  const radius = CELL_SIZE * 0.19;
+
+  context.beginPath();
+
+  context.arc(
+    centerX,
+    centerY,
+    radius,
+    0,
+    Math.PI * 2
+  );
+
+  context.fillStyle =
+    "rgba(8, 26, 40, 0.34)";
+
+  context.fill();
+
+  context.beginPath();
+  context.moveTo(
+    centerX - radius * 0.62,
+    centerY - radius * 0.62
+  );
+  context.lineTo(
+    centerX + radius * 0.62,
+    centerY + radius * 0.62
+  );
+  context.moveTo(
+    centerX + radius * 0.62,
+    centerY - radius * 0.62
+  );
+  context.lineTo(
+    centerX - radius * 0.62,
+    centerY + radius * 0.62
+  );
+
+  context.strokeStyle =
+    "rgba(150, 178, 192, 0.45)";
+
+  context.lineWidth = 4;
+
+  context.stroke();
 }
 
 function requestRender(animationMs = 0) {
@@ -3339,7 +3476,7 @@ function renderEventLog() {
     state.turn === "player"
   ) {
     elements.tipText.textContent =
-      "После попадания обычно стоит проверить соседние клетки. Координаты скрытого флота соперника отображаются только рядом с его выстрелами.";
+      "Корабли соперника скрыты: вы видите их только там, где он попал в ваше поле. После попадания в корабль проверьте соседние клетки — остальные палубы могут быть рядом.";
   } else {
     elements.tipText.textContent =
       "Дождитесь хода соперника. Ваши попадания отмечаются на его поле, а его выстрелы — на вашем.";

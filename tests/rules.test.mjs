@@ -2,10 +2,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  BOARD_SIZE,
+  COLUMN_LABELS,
   applyAttack,
   canPlaceShip,
   chooseBotTarget,
   createRandomFleet,
+  formatCoordinate,
   isFleetDestroyed,
   validateFleet
 } from "../public/shared/rules.mjs";
@@ -274,5 +277,115 @@ test(
         target.y
       );
     }
+  }
+);
+test(
+  "Столбцы доски подписаны русскими буквами",
+  () => {
+    assert.equal(
+      COLUMN_LABELS.length,
+      BOARD_SIZE,
+      "подписей столько же, сколько столбцов"
+    );
+
+    assert.deepEqual(
+      [...COLUMN_LABELS],
+      [
+        "А",
+        "Б",
+        "В",
+        "Г",
+        "Д",
+        "Е",
+        "Ж",
+        "З",
+        "И",
+        "К"
+      ]
+    );
+
+    assert.equal(
+      formatCoordinate(0, 0),
+      "А:1"
+    );
+
+    assert.equal(
+      formatCoordinate(9, 4),
+      "К:5"
+    );
+  }
+);
+
+test(
+  "Потопленный корабль помечается целиком в sunkCells",
+  () => {
+    const fleet = [
+      {
+        id: "ship-1",
+        cells: [
+          { x: 2, y: 3 },
+          { x: 3, y: 3 },
+          { x: 4, y: 3 }
+        ]
+      }
+    ];
+
+    const attacks = [];
+
+    const first = applyAttack(
+      fleet,
+      attacks,
+      2,
+      3
+    );
+
+    assert.equal(
+      first.sunk,
+      false
+    );
+
+    assert.equal(
+      first.sunkCells,
+      undefined,
+      "непотопленный корабль не даёт sunkCells"
+    );
+
+    applyAttack(
+      fleet,
+      attacks,
+      3,
+      3
+    );
+
+    const last = applyAttack(
+      fleet,
+      attacks,
+      4,
+      3
+    );
+
+    assert.equal(
+      last.sunk,
+      true
+    );
+
+    // Флаг sunk ставится только на последней палубе,
+    // поэтому все клетки корабля должны быть в sunkCells.
+    const sunkCount =
+      attacks.filter(
+        (attack) => attack.sunk
+      ).length;
+
+    assert.equal(
+      sunkCount,
+      1,
+      "флаг sunk стоит только на последней палубе"
+    );
+
+    assert.deepEqual(
+      last.sunkCells,
+      fleet[0].cells,
+      "sunkCells содержит все клетки корабля"
+    );
   }
 );

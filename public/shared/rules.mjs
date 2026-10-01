@@ -1,5 +1,31 @@
 export const BOARD_SIZE = 10;
 
+// Подписи столбцов доски. Строка из десяти букв
+// используется вместо цифр по горизонтали.
+export const COLUMN_LABELS = Object.freeze([
+  "А",
+  "Б",
+  "В",
+  "Г",
+  "Д",
+  "Е",
+  "Ж",
+  "З",
+  "И",
+  "К"
+]);
+
+/**
+ * Человекочитаемая запись координаты: столбец буквой,
+ * строка цифрой, например «А:3».
+ */
+export function formatCoordinate(x, y) {
+  const column =
+    COLUMN_LABELS[x] || String(x + 1);
+
+  return `${column}:${y + 1}`;
+}
+
 export const FLEET_LAYOUT = Object.freeze([
   Object.freeze({ size: 4, count: 1 }),
   Object.freeze({ size: 3, count: 2 }),
@@ -282,6 +308,16 @@ export function applyAttack(fleet, attacks, x, y) {
     result.sunk = ship.cells.every((cell) =>
       attacked.has(cellKey(cell.x, cell.y))
     );
+
+    // Флаг sunk появляется только на последней палубе, поэтому
+    // вместе с ним кладём все клетки корабля: они нужны, чтобы
+    // отметить заведомо пустые клетки вокруг потопленного корабля.
+    if (result.sunk) {
+      result.sunkCells = ship.cells.map((cell) => ({
+        x: cell.x,
+        y: cell.y
+      }));
+    }
   }
 
   attacks.push(result);
