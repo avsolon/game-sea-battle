@@ -1,0 +1,64 @@
+# Морской бой — бэкенд-микросервис.
+#
+# nginx у вас работает на хосте (в конфиге все proxy_pass на localhost),
+# поэтому контейнер публикует порт ТОЛЬКО на 127.0.0.1: наружу он не виден.
+#
+#   docker compose --env-file deploy/.env.production \
+#     -f docker-compose.yml up -d --build
+#
+# Порт 8102 свободный (заняты 22,53,68,80,443,3000,3001,5433,8000,8002,
+# 8081-8085,8087-8091,8093,8095,8101). Проверьте перед стартом:
+#   ss -ltn | grep 8102
+
+services:
+  sea-battle:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: sea-battle-backend:1.0.0
+    container_name: sea-battle-backend
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 10s
+
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      # Строгая проверка Origin для WebSocket. Домен должен совпасть с тем,
+      # что браузер шлёт в Origin: со схемой https:// и без слэша в конце.
+      ALLOWED_ORIGINS: ${SEA_BATTLE_ALLOWED_ORIGINS:-https://asolontsov.ru,https://www.asolontsov.ru}
+      DISCONNECT_GRACE_MS: ${SEA_BATTLE_DISCONNECT_GRACE_MS:-60000}
+      # CORS не нужен: страница и ассеты отдаются с того же домена.
+      CORS_ORIGINS: ${SEA_BATTLE_CORS_ORIGINS:-}
+
+    # Только localhost: снаружи сервис недоступен, доступ — исключительно
+    # через nginx.
+    ports:
+      - "127.0.0.1:${SEA_BATTLE_HOST_PORT:-8102}:3000"
+
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - --quiet
+        - --tries=1
+        - --spider
+        - http://127.0.0.1:3000/healthz
+      interval: 30s
+      timeout: 4s
+      retries: 3
+      start_period: 5s
+
+    security_opt:
+      - no-new-privileges:true
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    deploy:
+      resources:
+        limits:
+          memory: 256M

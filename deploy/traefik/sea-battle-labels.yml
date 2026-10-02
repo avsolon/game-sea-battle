@@ -1,0 +1,31 @@
+# Морской бой для Traefik (docker labels на сервисе sea-battle).
+# Traefik сам понимает WebSocket, отдельных таймаутов не нужно.
+#
+#   docker:
+#     expose:
+#       - "3000"
+#     networks:
+#       - proxy
+#     labels:
+#       - traefik.enable=true
+#       - traefik.docker.network=${SITE_PROXY_NETWORK:-proxy}
+#       - traefik.http.routers.sea-battle.rule=Host(`asolontsov.ru`) && PathPrefix(`/sea-battle`)
+#       - traefik.http.routers.sea-battle.entrypoints=websecure
+#       - traefik.http.routers.sea-battle.middlewares=sea-battle-secure
+#       - traefik.http.routers.sea-battle.tls.certresolver=letsencrypt
+#       - traefik.http.services.sea-battle.loadbalancer.server.port=3000
+#
+# middlewares (файл traefik-dynamic.yml):
+#
+#   http:
+#     middlewares:
+#       sea-battle-secure:
+#         headers:
+#           stsSeconds: 31536000
+#           stsIncludeSubdomains: true
+#           contentTypeNosniff: true
+#         # срезаем префикс /sea-battle, чтобы бэкенд видел /ws и /game.js
+#         # (либо оставьте префикс и укажите его в конфиге игры)
+#   stripPrefix:
+#     prefixes:
+#       - /sea-battle

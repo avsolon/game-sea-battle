@@ -33,9 +33,13 @@ html,
 body {
   width: 100%;
   height: 100%;
+  /* dvh учитывает сворачивающуюся адресную строку мобильных браузеров. */
+  height: 100dvh;
   margin: 0;
   overflow: hidden;
   background: var(--bg-0);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
@@ -198,12 +202,34 @@ summary:focus-visible {
 
 .menu-banner {
   display: block;
-  width: 100%;
+  width: min(100%, 460px);
   height: auto;
-  margin-bottom: 14px;
+  margin: 0 auto 14px;
   border-radius: var(--radius);
   border: 1px solid var(--line);
   box-shadow: var(--shadow);
+}
+
+/* Низкий экран (iPhone SE и подобные): баннер уменьшается по ширине, чтобы
+   меню целиком помещалось без вертикальной прокрутки. Изображение не
+   обрезается — пропорции сохраняются. */
+@media (max-height: 820px) and (orientation: portrait) {
+  .menu-banner {
+    width: min(100%, 210px);
+    margin-bottom: 10px;
+  }
+
+  .menu-actions {
+    margin-top: 18px;
+  }
+
+  .rules-details {
+    margin-top: 14px;
+  }
+
+  .site-back-link {
+    margin-top: 12px;
+  }
 }
 
 .eyebrow {
@@ -450,6 +476,26 @@ summary:focus-visible {
   letter-spacing: 0.06em;
 }
 
+.site-back-link {
+  display: inline-block;
+  margin-top: 18px;
+  padding: 12px 18px;
+  min-height: 44px;
+  border-radius: 999px;
+  color: var(--text);
+  background: rgba(24, 53, 74, 0.72);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  touch-action: manipulation;
+}
+
+.site-back-link:hover {
+  color: var(--text);
+  background: rgba(34, 72, 98, 0.9);
+}
+
 .game-screen {
   display: flex;
   flex-direction: column;
@@ -484,7 +530,8 @@ summary:focus-visible {
   justify-content: center;
   align-items: center;
   gap: 7px;
-  min-height: 40px;
+  min-width: 44px;
+  min-height: 44px;
   padding: 8px 11px;
   color: var(--muted);
   background: rgba(24, 53, 74, 0.72);
@@ -521,7 +568,7 @@ summary:focus-visible {
   border-radius: 999px;
   color: var(--primary);
   background: rgba(46, 211, 183, 0.1);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 900;
   letter-spacing: 0.1em;
 }
@@ -641,7 +688,7 @@ summary:focus-visible {
   border-radius: 999px;
   color: var(--muted);
   background: rgba(128, 184, 208, 0.08);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
 }
 
@@ -763,7 +810,7 @@ summary:focus-visible {
   display: block;
   margin-top: 2px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
 }
 
@@ -996,6 +1043,21 @@ summary:focus-visible {
     width: min(100%, 54vh, 520px);
   }
 
+  /* Крупные кнопки и поля ввода на телефоне. */
+  .icon-button,
+  .compact-button,
+  .small-button,
+  .fleet-chip {
+    min-height: 44px;
+  }
+
+  .mode-badge,
+  .room-badge,
+  .fleet-badge,
+  .fleet-chip small {
+    font-size: 11px;
+  }
+
   .placement-topline {
     display: block;
   }
@@ -1083,12 +1145,38 @@ summary:focus-visible {
   }
 
   .canvas-shell {
-    width: min(100%, 58vh, 440px);
+    width: min(100%, 64vh, 440px);
   }
 
   .board-legend,
   .board-heading p {
     display: none;
+  }
+
+  /* Низкий экран: панель расстановки должна помещаться под доской. */
+  .placement-topline strong,
+  .placement-hint {
+    display: none;
+  }
+
+  .placement-panel {
+    padding: 9px;
+  }
+
+  .placement-status {
+    margin-top: 6px;
+  }
+}
+
+@media (max-height: 480px) and (orientation: landscape) {
+  /* Очень низкий экран: убираем баннер, чтобы меню помещалось без прокрутки. */
+  .menu-banner,
+  .menu-lead {
+    display: none;
+  }
+
+  .menu-header {
+    margin-bottom: 10px;
   }
 }
 

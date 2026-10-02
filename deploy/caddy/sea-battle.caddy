@@ -1,0 +1,17 @@
+# Морской бой для Caddy (если сайт работает на Caddy).
+# Вставьте внутрь блока `site asolontsov.ru { ... }` рядом с вашими маршрутами.
+
+handle /sea-battle/* {
+	# /sea-battle/ws -> бэкенд /ws, остальное -> /<путь>
+	handle_path /sea-battle/* {
+		reverse_proxy sea-battle-backend:3000 {
+			header_up Host {host}
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			flush_interval -1
+			transport http {
+				read_timeout 1h
+			}
+		}
+	}
+}

@@ -7,5 +7,12 @@ window.SEA_BATTLE_CONFIG = {
    */
   serverUrl: "",
 
-  fullscreenAdEveryRounds: 3
+  fullscreenAdEveryRounds: 3,
+
+  /*
+   * SDK Яндекс Игр. undefined = автоопределение: грузится только внутри
+   * Яндекса, во встроенном iframe или на localhost. На стороннем сайте
+   * поставьте false.
+   */
+  yandexSdk: undefined
 };

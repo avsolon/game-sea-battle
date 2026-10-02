@@ -1,6 +1,47 @@
 const YANDEX_SDK_URL =
   "https://yandex.ru/games/sdk/v2";
 
+const YANDEX_HOST_PATTERN =
+  /(^|\.)(yandex\.(ru|com|by|kz|uz)|ya\.ru)$/i;
+
+function isLocalHost(hostname) {
+  return (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "[::1]" ||
+    hostname.endsWith(".local")
+  );
+}
+
+/**
+ * SDK Яндекс Игр нужен только внутри их плеера. На отдельном сайте
+ * (например asolontsov.ru) его загрузка бессмысленна: она даёт ошибки
+ * «No parent to post message» и лишний запрос к чужому домену.
+ *
+ * Управление: SEA_BATTLE_CONFIG.yandexSdk = true | false.
+ * Если флаг не задан, режим определяется автоматически.
+ */
+function shouldLoadYandexSdk() {
+  const explicit = window.SEA_BATTLE_CONFIG?.yandexSdk;
+
+  if (typeof explicit === "boolean") {
+    return explicit;
+  }
+
+  const { hostname } = window.location;
+
+  if (YANDEX_HOST_PATTERN.test(hostname)) {
+    return true;
+  }
+
+  // Игра открыта в iframe: превью и встраивание.
+  if (window.parent !== window) {
+    return true;
+  }
+
+  return isLocalHost(hostname);
+}
+
 function withTimeout(promise, milliseconds) {
   let timer;
 
@@ -96,6 +137,11 @@ export function createPlatform() {
     sdk: null,
 
     async init() {
+      if (!shouldLoadYandexSdk()) {
+        this.available = false;
+        return;
+      }
+
       try {
         const yaGames = await withTimeout(
           loadSdkScript(),

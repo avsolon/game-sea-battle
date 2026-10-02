@@ -41,6 +41,16 @@ const defaultYandexOrigins = new Set([
   "https://yandex.kz"
 ]);
 
+// Origins, которым разрешено читать статику игры с домена бэкенда.
+// Нужен, только если страница лежит на одном домене, а ассеты игры
+// отдаются с другого (когда CORS выключен — пустой список).
+const corsOrigins = new Set(
+  String(process.env.CORS_ORIGINS || "")
+    .split(",")
+    .map((origin) => origin.trim().replace(/\/$/, ""))
+    .filter(Boolean)
+);
+
 function readInteger(value, fallback) {
   const parsed = Number.parseInt(String(value ?? ""), 10);
   return Number.isFinite(parsed) && parsed > 0
@@ -124,6 +134,28 @@ app.use((request, response, next) => {
     "Permissions-Policy",
     "camera=(), microphone=(), geolocation=(), payment=()"
   );
+
+  next();
+});
+
+// CORS включается только если явно перечислены источники (CORS_ORIGINS).
+// Нужен для схемы «страница на сайте, ассеты с домена бэкенда».
+app.use((request, response, next) => {
+  if (corsOrigins.size === 0) {
+    next();
+    return;
+  }
+
+  const requestOrigin = String(request.headers.origin || "")
+    .trim()
+    .replace(/\/$/, "");
+
+  if (corsOrigins.has("*")) {
+    response.setHeader("Access-Control-Allow-Origin", "*");
+  } else if (requestOrigin && corsOrigins.has(requestOrigin)) {
+    response.setHeader("Access-Control-Allow-Origin", requestOrigin);
+    response.setHeader("Vary", "Origin");
+  }
 
   next();
 });

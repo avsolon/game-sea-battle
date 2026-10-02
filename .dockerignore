@@ -1,0 +1,16 @@
+node_modules
+npm-debug.log*
+.git
+.gitignore
+.DS_Store
+.opencode
+tests
+deploy
+sea_battle.png
+README.md
+.env
+.env.*
+*.log
+Dockerfile
+.dockerignore
+docker-compose*.yml
