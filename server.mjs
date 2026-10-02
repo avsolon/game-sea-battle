@@ -200,12 +200,29 @@ server.on("upgrade", (request, socket, head) => {
     requestUrl.pathname !== "/ws" ||
     !isOriginAllowed(request.headers.origin)
   ) {
+    console.warn(
+      `[ws] отказано: path=${requestUrl.pathname} ` +
+        `origin=${request.headers.origin || "(нет)"} ` +
+        `host=${request.headers.host || "(нет)"} ` +
+        `причина=${
+          requestUrl.pathname !== "/ws"
+            ? "не тот путь (ожидается /ws)"
+            : "Origin не разрешён"
+        }`
+    );
+
     socket.write(
       "HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n"
     );
     socket.destroy();
     return;
   }
+
+  console.log(
+    `[ws] рукопожатие: ${requestUrl.pathname} ` +
+      `origin=${request.headers.origin || "(нет)"} ` +
+      `ip=${request.socket.remoteAddress}`
+  );
 
   webSocketServer.handleUpgrade(
     request,
@@ -314,6 +331,10 @@ function send(webSocket, payload) {
 }
 
 function sendError(webSocket, code, message) {
+  console.warn(
+    `[ws] ошибка клиенту: ${code} — ${message}`
+  );
+
   send(webSocket, {
     type: "error",
     code,
@@ -1128,8 +1149,24 @@ webSocketServer.on(
     webSocket.rateTokens = 30;
     webSocket.rateLast = Date.now();
 
+    const clientInfo =
+      `ip=${request.socket.remoteAddress} ` +
+      `origin=${request.headers.origin || "(нет)"}`;
+
+    console.log(`[ws] соединение установлено: ${clientInfo}`);
+
     webSocket.on("pong", () => {
       webSocket.isAlive = true;
+    });
+
+    webSocket.on("close", (code, reason) => {
+      console.log(
+        `[ws] соединение закрыто (${code}${reason?.length ? ` ${reason}` : ""}): ${clientInfo}`
+      );
+    });
+
+    webSocket.on("error", (error) => {
+      console.warn(`[ws] ошибка сокета: ${error.message}`);
     });
 
     webSocket.on("message", (rawData) => {
